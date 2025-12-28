@@ -133,6 +133,18 @@ function Library:Window(Config)
 		ClipsDescendants = false
 	})
 
+	function Library:ToggleGui()
+		Main.Visible = not Main.Visible
+	end
+	
+	UserInputService.InputBegan:Connect(function(Input, GameProcessed)
+		if GameProcessed then return end
+
+		if Input.KeyCode == Config.ToggleGuiVisiblity then
+			Library:ToggleGui()
+		end
+	end)
+
 	CreateInstance("UICorner", {
 		Parent = Main, 
 		CornerRadius = UDim.new(0, 2)
@@ -1559,6 +1571,5 @@ function Library:Window(Config)
 
 	return WindowObject
 end
-
 
 return Library
