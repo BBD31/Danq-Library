@@ -1,8 +1,9 @@
-local Library = nil
+local Library = require(game.ReplicatedStorage.Library)
 
 local Window = Library:Window({
 	Title = "Debug",
-	Size = UDim2.new(0,320,0,250)
+	Size = UDim2.new(0,320,0,250),
+	ToggleGuiVisiblity = Enum.KeyCode.R
 })
 
 local MainTab = Window:AddTab({Title = "Main"})
@@ -14,7 +15,7 @@ MainTab:AddLabel({
 MainTab:AddButton({
 	Title = "Button",
 	Callback = function()
-		print("Save clicked!")
+		print("Button clicked!")
 	end
 })
 
