@@ -1,4 +1,4 @@
-local Library = require(game.ReplicatedStorage.Library)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/BBD31/Danq-Library/refs/heads/main/Library.lua"))()
 
 local Window = Library:Window({
 	Title = "Debug",
@@ -96,4 +96,5 @@ SettingsTab:AddDropdown({
 	Callback = function(selected)
 		Library:SetTheme(selected)
 	end
+
 })
