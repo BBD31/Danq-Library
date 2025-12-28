@@ -674,7 +674,7 @@ function Library:Window(Config)
 					if #List == 0 then
 						return (Info.Title or "") .. ": None"
 					end
-					return (Info.Title or "S") .. ": " .. table.concat(List, ", ")
+					return (Info.Title or "") .. ": " .. table.concat(List, ", ")
 				else
 					return (Info.Title or "") .. ": " .. (Options[SelectedSingle] or "None")
 				end
@@ -1559,5 +1559,6 @@ function Library:Window(Config)
 
 	return WindowObject
 end
+
 
 return Library
