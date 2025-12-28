@@ -1,4 +1,4 @@
-local Library = require(game.ReplicatedStorage.Library)
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/BBD31/Danq-Library/refs/heads/main/Library.lua"))()
 
 local Window = Library:Window({
 	Title = "Debug",
@@ -86,7 +86,7 @@ MainTab:AddSlider({
 MainTab:AddKeybind({
 	Title = "KeyBind",
 	Default = Enum.KeyCode.E,
-	Mode = "Once",
+	Mode = "Once", -- Once, Hold, Toggle
 	Callback = function(key)
 		print("KeyBind:", key)
 	end
@@ -108,3 +108,4 @@ SettingsTab:AddDropdown({
 		Library:SetTheme(selected)
 	end
 })
+
