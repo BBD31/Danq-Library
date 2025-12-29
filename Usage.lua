@@ -1,9 +1,11 @@
 local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/BBD31/Danq-Library/refs/heads/main/Library.lua"))()
 
+local ToggleKey = Enum.KeyCode.R
+
 local Window = Library:Window({
-	Title = "Debug",
-	Size = UDim2.new(0,320,0,250),
-	ToggleGuiVisiblity = Enum.KeyCode.R
+	Title = "Danq-Library",
+	Size = UDim2.new(0, 320, 0, 250),
+	ToggleGuiVisiblity = ToggleKey,
 })
 
 local MainTab = Window:AddTab({Title = "Main"})
@@ -86,16 +88,16 @@ MainTab:AddSlider({
 MainTab:AddKeybind({
 	Title = "KeyBind",
 	Default = Enum.KeyCode.E,
-	Mode = "Once", -- Once, Hold, Toggle
-	Callback = function(key)
-		print("KeyBind:", key)
+	Mode = "Hold", -- Hold, Toggle, if you want to toggle the GUI, the ToggleGui function will always toggle it, even when once mode at keybind is enabled.
+	Callback = function(Value, PressedKey)
+		print("KeyBind:", Value, PressedKey)
 	end
 })
 
 local SettingsTab = Window:AddTab({Title = "Settings"})
 
 SettingsTab:AddLabel({
-	Title = "Theme Settings",
+	Title = "Settings",
 	TextColor = Color3.fromRGB(0, 255, 234)
 })
 
@@ -108,4 +110,19 @@ SettingsTab:AddDropdown({
 		Library:SetTheme(selected)
 	end
 })
+
+SettingsTab:AddKeybind({
+	Title = "Toggle Gui Bind",
+	Default = Enum.KeyCode.R,
+	Mode = "Toggle",
+	Callback = function(Value, PressedKey)
+		Library:SetToggleKey(PressedKey)
+	end
+})
+Library:Notify({
+	Title = "123",
+	Text = "Notify",
+	Duration = 10
+})
+
 
