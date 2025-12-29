@@ -19,6 +19,7 @@ local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
 local TextService = game:GetService("TextService")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 Library.Themes = {
 	Dark = {
@@ -90,7 +91,7 @@ local function CreateInstance(ClassName, Properties)
 			end
 		end
 	end
-	
+
 	return Instance
 end
 
@@ -99,20 +100,24 @@ function Library:SetTheme(ThemeName)
 	if not Theme then 
 		return 
 	end
+
 	Library.CurrentTheme = Theme
-	
+
 	for _, ThemeObject in ipairs(Library.ThemedObjects) do
 		if ThemeObject.Instance and ThemeObject.Instance.Parent and ThemeObject.Property then
-			ThemeObject.Instance[ThemeObject.Property] = Theme[ThemeObject.ThemeKey]
+			TweenService:Create(ThemeObject.Instance, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+				[ThemeObject.Property] = Theme[ThemeObject.ThemeKey]
+			}):Play()
 		end
 	end
-	return {}
 end
 
 function Library:Window(Config)
 	local Title = Config.Title
 	local Size = Config.Size or UDim2.new(0, 300, 0, 200)
+	local ToggleKey = Config.ToggleGuiVisiblity or Enum.KeyCode.RightShift
 	local Theme = Library.CurrentTheme
+	local ToggleConnection 
 
 	local Gui = CreateInstance("ScreenGui", {
 		Name = "Danq Library",
@@ -130,20 +135,55 @@ function Library:Window(Config)
 		BorderColor3 = Theme.TopBar,
 		Position = UDim2.new(0.3, 0, 0.3, 0),
 		Size = Size,
-		ClipsDescendants = false
+		ClipsDescendants = false,
+		BackgroundTransparency = 0,
+		Visible = true
 	})
 
-	function Library:ToggleGui()
-		Main.Visible = not Main.Visible
-	end
-	
-	UserInputService.InputBegan:Connect(function(Input, GameProcessed)
-		if GameProcessed then return end
+	local SavedSize = Size
+	local Minimized = false
 
-		if Input.KeyCode == Config.ToggleGuiVisiblity then
-			Library:ToggleGui()
+	function Library:ToggleGui()
+		if Main.Visible then
+			TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+				Size = UDim2.new(0, 0, 0, 0)
+			}):Play()
+
+			task.wait(0.3)
+			Main.Visible = false
+		else
+			Main.Visible = true
+			Main.Size = UDim2.new(0, 0, 0, 0)
+
+			TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = SavedSize
+			}):Play()
 		end
-	end)
+	end
+
+	local function BindToggleKey()
+		if ToggleConnection then
+			ToggleConnection:Disconnect()
+		end
+
+		ToggleConnection = UserInputService.InputBegan:Connect(function(Input, Gp)
+			if Gp then return end
+			if Input.KeyCode == ToggleKey then
+				Library:ToggleGui()
+			end
+		end)
+	end
+
+	BindToggleKey()
+
+	function Library:SetToggleKey(NewKey)
+		ToggleKey = NewKey
+		BindToggleKey()
+	end
+
+	TweenService:Create(Main, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+		Size = Size
+	}):Play()
 
 	CreateInstance("UICorner", {
 		Parent = Main, 
@@ -163,25 +203,11 @@ function Library:Window(Config)
 		CornerRadius = UDim.new(0, 2)
 	})
 
-	local TitleLabel = CreateInstance("TextLabel", {
-		Name = "Title",
-		Parent = TopBar,
-		Text = "▼ " .. Title,
-		Font = Enum.Font.Code,
-		TextSize = 14,
-		TextColor3 = Color3.fromRGB(255, 255, 255),
-		BackgroundTransparency = 1,
-		Position = UDim2.new(0, 8, 0, 0),
-		Size = UDim2.new(1, -60, 1, 0),
-		TextXAlignment = Enum.TextXAlignment.Left,
-		TextYAlignment = Enum.TextYAlignment.Center
-	})
-
 	local MinimizeBtn = CreateInstance("TextButton", {
 		Name = "MinimizeBtn",
 		Parent = TopBar,
 		Text = "-",
-		BackgroundTransparency = 1,
+		BackgroundTransparency = 0,
 		Font = Enum.Font.Code,
 		TextSize = 16,
 		TextColor3 = Color3.fromRGB(220, 220, 220),
@@ -200,7 +226,7 @@ function Library:Window(Config)
 		Name = "CloseBtn",
 		Parent = TopBar,
 		Text = "×",
-		BackgroundTransparency = 1,
+		BackgroundTransparency = 0,
 		Font = Enum.Font.Code,
 		TextSize = 18,
 		TextColor3 = Color3.fromRGB(220, 220, 220),
@@ -214,9 +240,6 @@ function Library:Window(Config)
 		Parent = CloseBtn, 
 		CornerRadius = UDim.new(0, 2)
 	})
-
-	local Minimized = false
-	local SavedSize = Main.Size
 
 	local TabHolder = CreateInstance("Frame", {
 		Name = "TabHolder",
@@ -274,45 +297,124 @@ function Library:Window(Config)
 		CornerRadius = UDim.new(0, 2)
 	})
 
+	local Arrow = CreateInstance("TextLabel", {
+		Parent = TopBar,
+		Text = "▼",
+		Font = Enum.Font.Code,
+		TextSize = 14,
+		TextColor3 = Color3.fromRGB(255,255,255),
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 8, 0, 0),
+		Size = UDim2.new(0, 14, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Center,
+		TextYAlignment = Enum.TextYAlignment.Center
+	})
+
+	local TitleLabel = CreateInstance("TextLabel", {
+		Parent = TopBar,
+		Text = Title,
+		Font = Enum.Font.Code,
+		TextSize = 14,
+		TextColor3 = Color3.fromRGB(255,255,255),
+		BackgroundTransparency = 1,
+		Position = UDim2.new(0, 25, 0, 0),
+		Size = UDim2.new(1, -77, 1, 0),
+		TextXAlignment = Enum.TextXAlignment.Left,
+		TextYAlignment = Enum.TextYAlignment.Center
+	})
+
 	MinimizeBtn.MouseButton1Click:Connect(function()
 		Minimized = not Minimized
 
+		TweenService:Create(MinimizeBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+			Rotation = Minimized and 180 or 0
+		}):Play()
+
+		TweenService:Create(Arrow, TweenInfo.new(0.25, Enum.EasingStyle.Back), {
+			Rotation = Minimized and -90 or 0
+		}):Play()
+
 		if Minimized then
 			SavedSize = Main.Size
+
+			TweenService:Create(TabHolder, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(1, 0, 0, 0)
+			}):Play()
+
+			TweenService:Create(ContentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(1, 0, 0, 0)
+			}):Play()
+
+			TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+				Size = UDim2.new(Main.Size.X.Scale, Main.Size.X.Offset, 0, 28)
+			}):Play()
+
+			task.wait(0.3)
 			TabHolder.Visible = false
 			ContentContainer.Visible = false
 			ResizeCorner.Visible = false
-			Main.Size = UDim2.new(Main.Size.X.Scale, Main.Size.X.Offset, 0, 28)
 			MinimizeBtn.Text = "+"
-			TitleLabel.Text = "▶ " .. Title
 		else
-			Main.Size = SavedSize
 			TabHolder.Visible = true
 			ContentContainer.Visible = true
 			ResizeCorner.Visible = true
 			MinimizeBtn.Text = "-"
-			TitleLabel.Text = "▼ " .. Title
+
+			TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = SavedSize
+			}):Play()
+
+			task.wait(0.1)
+
+			TweenService:Create(TabHolder, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1, 0, 0, 26)
+			}):Play()
+
+			TweenService:Create(ContentContainer, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = UDim2.new(1, 0, 1, -54)
+			}):Play()
 		end
 	end)
 
 	CloseBtn.MouseButton1Click:Connect(function()
+		TweenService:Create(CloseBtn, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+			Rotation = 90
+		}):Play()
+
+		TweenService:Create(Main, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {
+			Size = UDim2.new(0, 0, 0, 0)
+		}):Play()
+
+		task.wait(0.3)
 		Gui:Destroy()
 	end)
 
 	MinimizeBtn.MouseEnter:Connect(function()
-		MinimizeBtn.BackgroundColor3 = Library.CurrentTheme.AccentHover
+		TweenService:Create(MinimizeBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+			BackgroundColor3 = Library.CurrentTheme.AccentHover,
+			Size = UDim2.new(0, 24, 0, 18)
+		}):Play()
 	end)
 
 	MinimizeBtn.MouseLeave:Connect(function()
-		MinimizeBtn.BackgroundColor3 = Library.CurrentTheme.Accent
+		TweenService:Create(MinimizeBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+			BackgroundColor3 = Library.CurrentTheme.Accent,
+			Size = UDim2.new(0, 22, 0, 16)
+		}):Play()
 	end)
 
 	CloseBtn.MouseEnter:Connect(function()
-		CloseBtn.BackgroundColor3 = Color3.fromRGB(180, 60, 60)
+		TweenService:Create(CloseBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+			BackgroundColor3 = Library.CurrentTheme.AccentHover,
+			Size = UDim2.new(0, 24, 0, 18)
+		}):Play()
 	end)
 
 	CloseBtn.MouseLeave:Connect(function()
-		CloseBtn.BackgroundColor3 = Library.CurrentTheme.Accent
+		TweenService:Create(CloseBtn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+			BackgroundColor3 = Library.CurrentTheme.Accent,
+			Size = UDim2.new(0, 22, 0, 16)
+		}):Play()
 	end)
 
 	local Dragging, DragStart, StartPos
@@ -386,13 +488,134 @@ function Library:Window(Config)
 
 	local function SwitchTab(Tab)
 		if ActiveTab then
-			ActiveTab.Button.BackgroundColor3 = Library.CurrentTheme.TabInactive
+			TweenService:Create(ActiveTab.Button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+				BackgroundColor3 = Library.CurrentTheme.TabInactive
+			}):Play()
+
+			TweenService:Create(ActiveTab.Content, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+				BackgroundTransparency = 1
+			}):Play()
+
+			task.wait(0.2)
 			ActiveTab.Content.Visible = false
 		end
 
 		ActiveTab = Tab
-		Tab.Button.BackgroundColor3 = Library.CurrentTheme.TabActive
 		Tab.Content.Visible = true
+		Tab.Content.BackgroundTransparency = 1
+
+		TweenService:Create(Tab.Button, TweenInfo.new(0.3, Enum.EasingStyle.Quad), {
+			BackgroundColor3 = Library.CurrentTheme.TabActive
+		}):Play()
+	end
+
+	Library.NotifyFrame = CreateInstance("Frame", {
+		Parent = Gui,
+		Name = "NotifyFrame",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(0, 220, 0, 0),
+		Position = UDim2.new(1, -240, 0, 50)
+	})
+
+	local UIListLayout = CreateInstance("UIListLayout", {
+		Parent = Library.NotifyFrame,
+		SortOrder = Enum.SortOrder.LayoutOrder,
+		Padding = UDim.new(0, 6)
+	})
+
+	function Library:Notify(Info)
+		local Title = Info.Title or ""
+		local Text = Info.Text or ""
+		local Duration = Info.Duration 
+
+		local Notify = CreateInstance("Frame", {
+			Parent = Library.NotifyFrame,
+			BackgroundColor3 = Theme.ElementBg,
+			BorderColor3 = Theme.Border,
+			BorderSizePixel = 1,
+			Size = UDim2.new(0, 220, 0, 50),
+			ClipsDescendants = true
+		})
+		
+
+		CreateInstance("UICorner", {
+			Parent = Notify,
+			CornerRadius = UDim.new(0, 2)
+		})
+
+		local CloseBtn = CreateInstance("TextButton", {
+			Parent = Notify,
+			Text = "×",
+			Font = Enum.Font.Code,
+			TextSize = 16,
+			TextColor3 = Theme.TextDim,
+			BackgroundTransparency = 1,
+			Position = UDim2.new(1, -20, 0, 4),
+			Size = UDim2.new(0, 16, 0, 16)
+		})
+
+		CloseBtn.MouseButton1Click:Connect(function()
+			TweenService:Create(Notify, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+				Size = UDim2.new(0,0,0,0)
+			}):Play()
+			task.wait(0.2)
+			Notify:Destroy()
+		end)
+
+		local TitleLabel = CreateInstance("TextLabel", {
+			Parent = Notify,
+			Text = Title:upper(),
+			Font = Enum.Font.Code,
+			TextSize = 14,
+			TextColor3 = Theme.Text,
+			BackgroundTransparency = 0,
+			Position = UDim2.new(0, 8, 0, 4),
+			Size = UDim2.new(1, -32, 0, 18),
+			TextXAlignment = Enum.TextXAlignment.Left,
+			BackgroundColor3 = Theme.ElementBg
+		})
+		
+		CreateInstance("UICorner", {
+			Parent = TitleLabel, 
+			CornerRadius = UDim.new(0, 2)
+		})
+
+		local TextLabel = CreateInstance("TextLabel", {
+			Parent = Notify,
+			Text = Text,
+			Font = Enum.Font.Code,
+			TextSize = 13.5,
+			TextColor3 = Theme.TextDim,
+			BackgroundTransparency = 1,
+			Position = UDim2.new(0, 8, 0, 22),
+			Size = UDim2.new(1, -16, 0, 18),
+			TextWrapped = true,
+			TextXAlignment = Enum.TextXAlignment.Left
+		})
+		
+		CreateInstance("UICorner", {
+			Parent = TextLabel, 
+			CornerRadius = UDim.new(0, 2)
+		})
+
+		local TextHeight = TextLabel.TextBounds.Y
+		local TotalHeight = math.max(50, TextHeight + 28)
+		Notify.Size = UDim2.new(0, 220, 0, TotalHeight)
+
+		Notify.Position = UDim2.new(1, 240, 0, 50)
+		TweenService:Create(Notify, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Position = UDim2.new(1, -240, 0, 50)
+		}):Play()
+
+		task.delay(Duration, function()
+			if Notify.Parent then
+				TweenService:Create(Notify, TweenInfo.new(0.2, Enum.EasingStyle.Back), {
+					Size = UDim2.new(0,0,0,0)
+				}):Play()
+				task.wait(0.2)
+				Notify:Destroy()
+			end
+		end)
 	end
 
 	local WindowObject = {}
@@ -434,6 +657,22 @@ function Library:Window(Config)
 			Parent = TabButton, 
 			CornerRadius = UDim.new(0, 2)
 		})
+
+		TabButton.MouseEnter:Connect(function()
+			if ActiveTab and ActiveTab.Button ~= TabButton then
+				TweenService:Create(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BackgroundColor3 = Library.CurrentTheme.AccentHover
+				}):Play()
+			end
+		end)
+
+		TabButton.MouseLeave:Connect(function()
+			if ActiveTab and ActiveTab.Button ~= TabButton then
+				TweenService:Create(TabButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BackgroundColor3 = Library.CurrentTheme.TabInactive
+				}):Play()
+			end
+		end)
 
 		local Content = CreateInstance("ScrollingFrame", {
 			Parent = ContentContainer,
@@ -503,17 +742,29 @@ function Library:Window(Config)
 			})
 
 			Button.MouseButton1Click:Connect(function()
+				TweenService:Create(Button, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+					Size = UDim2.new(1, 0, 0, 22)
+				}):Play()
+				task.wait(0.1)
+				TweenService:Create(Button, TweenInfo.new(0.1, Enum.EasingStyle.Back), {
+					Size = UDim2.new(1, 0, 0, 24)
+				}):Play()
+
 				if Info.Callback then 
 					Info.Callback() 
 				end
 			end)
 
 			Button.MouseEnter:Connect(function()
-				Button.BackgroundColor3 = Library.CurrentTheme.AccentHover
+				TweenService:Create(Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BackgroundColor3 = Library.CurrentTheme.AccentHover
+				}):Play()
 			end)
 
 			Button.MouseLeave:Connect(function()
-				Button.BackgroundColor3 = Library.CurrentTheme.Accent
+				TweenService:Create(Button, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BackgroundColor3 = Library.CurrentTheme.Accent
+				}):Play()
 			end)
 
 			return Button
@@ -554,12 +805,7 @@ function Library:Window(Config)
 				TextXAlignment = Enum.TextXAlignment.Left
 			})
 
-			local InitialColor
-			if ToggleState then
-				InitialColor = Theme.ToggleOn
-			else
-				InitialColor = Theme.ToggleOff
-			end
+			local InitialColor = ToggleState and Theme.ToggleOn or Theme.ToggleOff
 
 			local StatusIndicator = CreateInstance("Frame", {
 				Parent = ToggleButton,
@@ -576,11 +822,14 @@ function Library:Window(Config)
 
 			ToggleButton.MouseButton1Click:Connect(function()
 				ToggleState = not ToggleState
-				if ToggleState then
-					StatusIndicator.BackgroundColor3 = Library.CurrentTheme.ToggleOn
-				else
-					StatusIndicator.BackgroundColor3 = Library.CurrentTheme.ToggleOff
-				end
+				TweenService:Create(StatusIndicator, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					BackgroundColor3 = ToggleState and Library.CurrentTheme.ToggleOn or Library.CurrentTheme.ToggleOff,
+					Size = ToggleState and UDim2.new(0, 17, 0, 17) or UDim2.new(0, 15, 0, 15)
+				}):Play()
+				task.wait(0.15)
+				TweenService:Create(StatusIndicator, TweenInfo.new(0.15, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Size = UDim2.new(0, 15, 0, 15)
+				}):Play()
 				if Info.Callback then 
 					Info.Callback(ToggleState) 
 				end
@@ -591,7 +840,7 @@ function Library:Window(Config)
 
 		function TabObject:AddDropdown(Info)
 			local Multi = Info.Multi or false
-			local MaxVisible = 5
+			local MaxVisible = Info.MaxVisible or 5
 			local Options = Info.Options or {}
 			local GuiRoot = Gui
 			local SelectedSet = {}
@@ -702,6 +951,8 @@ function Library:Window(Config)
 				Visible = false,
 				ClipsDescendants = true,
 				ZIndex = 100,
+				BackgroundTransparency = 1,
+				Size = UDim2.new(0, 0, 0, 0)
 			})
 
 			CreateInstance("UICorner", {
@@ -730,11 +981,16 @@ function Library:Window(Config)
 
 			local function RefreshHighlights()
 				for I, Btn in ipairs(OptionButtons) do
+					local TargetColor
 					if Multi then
-						Btn.BackgroundColor3 = SelectedSet[I] and Library.CurrentTheme.Accent or Library.CurrentTheme.ElementBg
+						TargetColor = SelectedSet[I] and Library.CurrentTheme.Accent or Library.CurrentTheme.ElementBg
 					else
-						Btn.BackgroundColor3 = (SelectedSingle == I) and Library.CurrentTheme.Accent or Library.CurrentTheme.ElementBg
+						TargetColor = (SelectedSingle == I) and Library.CurrentTheme.Accent or Library.CurrentTheme.ElementBg
 					end
+
+					TweenService:Create(Btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = TargetColor
+					}):Play()
 				end
 			end
 
@@ -769,7 +1025,9 @@ function Library:Window(Config)
 
 				Btn.MouseEnter:Connect(function()
 					if (Multi and not SelectedSet[I]) or (not Multi and SelectedSingle ~= I) then
-						Btn.BackgroundColor3 = Library.CurrentTheme.AccentHover
+						TweenService:Create(Btn, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+							BackgroundColor3 = Library.CurrentTheme.AccentHover
+						}):Play()
 					end
 				end)
 
@@ -777,7 +1035,117 @@ function Library:Window(Config)
 					RefreshHighlights()
 				end)
 
+			local Opened = false
+			local RenderConn = nil
+			local Blocker = nil
+
+			local function OpenDropdown()
+				Opened = true
+				Dropdown.Visible = true
+
+				TweenService:Create(Arrow, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+					Rotation = 180
+				}):Play()
+
+				Content.ScrollingEnabled = false
+
+				local AbsPos = Container.AbsolutePosition
+				local AbsSize = Container.AbsoluteSize
+				local ListHeight = math.min(#Options, MaxVisible) * 22
+				local Viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+				local BottomY = AbsPos.Y + AbsSize.Y + ListHeight + 4
+
+				if BottomY > Viewport.Y then
+					Dropdown.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y - ListHeight - 4)
+				else
+					Dropdown.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y + AbsSize.Y + 2)
+				end
+
+				Dropdown.Size = UDim2.new(0, AbsSize.X, 0, 0)
+				Scroll.CanvasSize = UDim2.new(0, 0, 0, #Options * 22)
+
+				TweenService:Create(Dropdown, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Size = UDim2.new(0, AbsSize.X, 0, ListHeight),
+					BackgroundTransparency = 0
+				}):Play()
+
+				RefreshHighlights()
+
+				RenderConn = RunService.RenderStepped:Connect(function()
+					local Ap = Container.AbsolutePosition
+					local Asz = Container.AbsoluteSize
+					local ListH = math.min(#Options, MaxVisible) * 22
+					local Vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+					local By = Ap.Y + Asz.Y + ListH + 4
+
+					if By > Vp.Y then
+						Dropdown.Position = UDim2.new(0, Ap.X, 0, Ap.Y - ListH - 4)
+					else
+						Dropdown.Position = UDim2.new(0, Ap.X, 0, Ap.Y + Asz.Y + 2)
+					end
+				end)
+
+				Blocker = CreateInstance("TextButton", {
+					Parent = GuiRoot,
+					Size = UDim2.new(1, 0, 1, 0),
+					Position = UDim2.new(0, 0, 0, 0),
+					BackgroundTransparency = 1,
+					BorderSizePixel = 0,
+					ZIndex = 50,
+					AutoButtonColor = false,
+					Text = "",
+				})
+				
+				local function CloseDropdown()
+					if not Opened then return end
+					Opened = false
+
+					TweenService:Create(Arrow, TweenInfo.new(0.3, Enum.EasingStyle.Back), {
+						Rotation = 0
+					}):Play()
+
+					TweenService:Create(Dropdown, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+						Size = UDim2.new(0, Dropdown.AbsoluteSize.X, 0, 0),
+						BackgroundTransparency = 1
+					}):Play()
+
+					task.wait(0.2)
+					Dropdown.Visible = false
+					Content.ScrollingEnabled = true
+
+					if RenderConn then 
+						RenderConn:Disconnect()
+						RenderConn = nil 
+					end
+					if Blocker then 
+						Blocker:Destroy()
+						Blocker = nil 
+					end
+				end
+
+
+				Blocker.MouseButton1Click:Connect(function()
+					CloseDropdown()
+				end)
+			end
+			
+			Header.MouseButton1Click:Connect(function()
+				if Opened then
+					CloseDropdown()
+				else
+					OpenDropdown()
+				end
+			end)
+			
 				Btn.MouseButton1Click:Connect(function()
+					TweenService:Create(Btn, TweenInfo.new(0.1, Enum.EasingStyle.Quad), {
+						Size = UDim2.new(1, -10, 0, 20)
+					}):Play()
+					task.wait(0.1)
+					TweenService:Create(Btn, TweenInfo.new(0.1, Enum.EasingStyle.Back), {
+						Size = UDim2.new(1, -8, 0, 22)
+					}):Play()
+
 					if Multi then
 						if SelectedSet[I] then 
 							SelectedSet[I] = nil 
@@ -800,102 +1168,22 @@ function Library:Window(Config)
 						if Info.Callback then 
 							Info.Callback(Options[SelectedSingle]) 
 						end
-						Dropdown.Visible = false
-						Arrow.Text = "▼"
+						task.wait(0.1)
+						CloseDropdown()
 					end
 				end)
 			end
 
-			local Opened = false
-			local RenderConn = nil
-			local Blocker = nil
+			Container.MouseEnter:Connect(function()
+				TweenService:Create(Container, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderColor3 = Library.CurrentTheme.Accent
+				}):Play()
+			end)
 
-			local function OpenDropdown()
-				Opened = true
-				Dropdown.Visible = true
-				Arrow.Text = "▲"
-				Content.ScrollingEnabled = false
-
-				local AbsPos = Container.AbsolutePosition
-				local AbsSize = Container.AbsoluteSize
-				local ListHeight = math.min(#Options, MaxVisible) * 22
-				local Viewport = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-				local BottomY = AbsPos.Y + AbsSize.Y + ListHeight + 4
-
-				if BottomY > Viewport.Y then
-					Dropdown.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y - ListHeight - 4)
-				else
-					Dropdown.Position = UDim2.new(0, AbsPos.X, 0, AbsPos.Y + AbsSize.Y + 2)
-				end
-
-				Dropdown.Size = UDim2.new(0, AbsSize.X, 0, ListHeight)
-				Scroll.CanvasSize = UDim2.new(0, 0, 0, #Options * 22)
-				RefreshHighlights()
-
-				RenderConn = RunService.RenderStepped:Connect(function()
-					local Ap = Container.AbsolutePosition
-					local Asz = Container.AbsoluteSize
-					local ListH = math.min(#Options, MaxVisible) * 22
-					local Vp = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-					local By = Ap.Y + Asz.Y + ListH + 4
-
-					if By > Vp.Y then
-						Dropdown.Position = UDim2.new(0, Ap.X, 0, Ap.Y - ListH - 4)
-					else
-						Dropdown.Position = UDim2.new(0, Ap.X, 0, Ap.Y + Asz.Y + 2)
-					end
-
-					Dropdown.Size = UDim2.new(0, Asz.X, 0, ListH)
-				end)
-
-				Blocker = CreateInstance("TextButton", {
-					Parent = GuiRoot,
-					Size = UDim2.new(1, 0, 1, 0),
-					Position = UDim2.new(0, 0, 0, 0),
-					BackgroundTransparency = 1,
-					BorderSizePixel = 0,
-					ZIndex = 50,
-					AutoButtonColor = false,
-					Text = "",
-				})
-
-				Blocker.MouseButton1Click:Connect(function()
-					Dropdown.Visible = false
-					Arrow.Text = "▼"
-					Opened = false
-					Content.ScrollingEnabled = true
-					if RenderConn then 
-						RenderConn:Disconnect()
-						RenderConn = nil 
-					end
-					if Blocker then 
-						Blocker:Destroy()
-						Blocker = nil 
-					end
-				end)
-			end
-
-			local function CloseDropdown()
-				Opened = false
-				Dropdown.Visible = false
-				Arrow.Text = "▼"
-				Content.ScrollingEnabled = true
-				if RenderConn then 
-					RenderConn:Disconnect()
-					RenderConn = nil 
-				end
-				if Blocker then 
-					Blocker:Destroy()
-					Blocker = nil 
-				end
-			end
-
-			Header.MouseButton1Click:Connect(function()
-				if Opened then
-					CloseDropdown()
-				else
-					OpenDropdown()
-				end
+			Container.MouseLeave:Connect(function()
+				TweenService:Create(Container, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderColor3 = Library.CurrentTheme.Border
+				}):Play()
 			end)
 
 			return Container
@@ -987,7 +1275,9 @@ function Library:Window(Config)
 
 			local function UpdateSlider(Value)
 				CurrentValue = math.clamp(Value, Min, Max)
-				SliderFill.Size = UDim2.new((CurrentValue - Min) / (Max - Min), 0, 1, 0)
+				TweenService:Create(SliderFill, TweenInfo.new(0.15, Enum.EasingStyle.Quad), {
+					Size = UDim2.new((CurrentValue - Min) / (Max - Min), 0, 1, 0)
+				}):Play()
 				ValueBox.Text = tostring(CurrentValue)..Suffix
 				if Info.Callback then 
 					Info.Callback(CurrentValue) 
@@ -996,13 +1286,19 @@ function Library:Window(Config)
 
 			SliderButton.InputBegan:Connect(function(Input)
 				if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-					Dragging = true 
+					Dragging = true
+					TweenService:Create(SliderFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = Library.CurrentTheme.AccentHover
+					}):Play()
 				end
 			end)
 
 			SliderButton.InputEnded:Connect(function(Input)
 				if Input.UserInputType == Enum.UserInputType.MouseButton1 then 
-					Dragging = false 
+					Dragging = false
+					TweenService:Create(SliderFill, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = Library.CurrentTheme.Accent
+					}):Play()
 				end
 			end)
 
@@ -1019,6 +1315,10 @@ function Library:Window(Config)
 
 			ValueBox.Focused:Connect(function()
 				ValueBox.Text = ""
+				TweenService:Create(ValueBox, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderSizePixel = 1,
+					BorderColor3 = Library.CurrentTheme.Accent
+				}):Play()
 			end)
 
 			ValueBox.FocusLost:Connect(function()
@@ -1028,6 +1328,9 @@ function Library:Window(Config)
 				else
 					UpdateSlider(CurrentValue)
 				end
+				TweenService:Create(ValueBox, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderSizePixel = 0
+				}):Play()
 			end)
 
 			return Container
@@ -1074,7 +1377,8 @@ function Library:Window(Config)
 				Position = UDim2.new(0.4, 8, 0, 3),
 				Size = UDim2.new(0.6, -8, 1, -6), 
 				TextXAlignment = Enum.TextXAlignment.Left,
-				ZIndex = 2
+				ZIndex = 2,
+				BorderSizePixel = 0
 			})
 
 			CreateInstance("UIPadding", {
@@ -1087,7 +1391,17 @@ function Library:Window(Config)
 				CornerRadius = UDim.new(0, 6)
 			})
 
+			Input.Focused:Connect(function()
+				TweenService:Create(Input, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderSizePixel = 1,
+					BorderColor3 = Library.CurrentTheme.Accent
+				}):Play()
+			end)
+
 			Input.FocusLost:Connect(function()
+				TweenService:Create(Input, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+					BorderSizePixel = 0
+				}):Play()
 				if Info.Callback then 
 					Info.Callback(Input.Text) 
 				end
@@ -1096,8 +1410,150 @@ function Library:Window(Config)
 			return Container
 		end	
 
+		function TabObject:AddKeybind(Info)
+			local CurrentKey = Info.Default or Enum.KeyCode.E
+			local Mode = Info.Mode or "Once"
+			local IsWaiting = false
+			local IsListening = false
+			local ToggleState = false
+			local IsHolding = false
+			local OnceState = true
+			local CallbackFunc = Info.Callback
+
+			local Container = CreateInstance("Frame", {
+				Parent = Content,
+				BackgroundColor3 = Theme.ElementBg,
+				BorderSizePixel = 1,
+				BorderColor3 = Theme.Border,
+				Size = UDim2.new(1, 0, 0, 24)
+			})
+
+			CreateInstance("UICorner", {
+				Parent = Container, 
+				CornerRadius = UDim.new(0, 2)
+			})
+
+			local Label = CreateInstance("TextLabel", {
+				Parent = Container,
+				Text = Info.Title,
+				Font = Enum.Font.Code,
+				TextSize = 13,
+				TextColor3 = Theme.Text,
+				BackgroundTransparency = 1,
+				Position = UDim2.new(0, 8, 0, 0),
+				Size = UDim2.new(0.5, -8, 1, 0),
+				TextXAlignment = Enum.TextXAlignment.Left,
+				ZIndex = 2
+			})
+
+			local KeyButton = CreateInstance("TextButton", {
+				Parent = Container,
+				Text = CurrentKey.Name or "None",
+				Font = Enum.Font.Code,
+				TextSize = 13,
+				TextColor3 = Theme.Text,
+				BackgroundColor3 = Theme.MainBg,
+				Position = UDim2.new(0.5, 4, 0, 3),
+				Size = UDim2.new(0.5, -12, 1, -6),
+				BorderSizePixel = 0,
+				ZIndex = 2
+			})
+
+			CreateInstance("UICorner", {
+				Parent = KeyButton, 
+				CornerRadius = UDim.new(0, 2)
+			})
+
+			KeyButton.MouseButton1Click:Connect(function()
+				if not IsListening then
+					IsListening = true
+					KeyButton.Text = "..."
+					TweenService:Create(KeyButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = Library.CurrentTheme.AccentHover
+					}):Play()
+				end
+			end)
+
+			KeyButton.MouseEnter:Connect(function()
+				if not IsListening then
+					TweenService:Create(KeyButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = Library.CurrentTheme.AccentHover
+					}):Play()
+				end
+			end)
+
+			KeyButton.MouseLeave:Connect(function()
+				if not IsListening then
+					TweenService:Create(KeyButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+						BackgroundColor3 = Library.CurrentTheme.MainBg
+					}):Play()
+				end
+			end)
+
+			UserInputService.InputBegan:Connect(function(Input, GameProcessed)
+				if IsListening then
+					if Input.UserInputType == Enum.UserInputType.Keyboard then
+						CurrentKey = Input.KeyCode
+						KeyButton.Text = CurrentKey.Name
+						TweenService:Create(KeyButton, TweenInfo.new(0.2, Enum.EasingStyle.Quad), {
+							BackgroundColor3 = Library.CurrentTheme.MainBg
+						}):Play()
+						IsListening = false
+					end
+				elseif not GameProcessed and Input.KeyCode == CurrentKey and not IsWaiting then
+					if Mode == "Toggle" then
+						ToggleState = not ToggleState
+						IsWaiting = true
+
+						task.spawn(function()
+							if CallbackFunc then
+								CallbackFunc(ToggleState, CurrentKey)
+							end
+						end)
+						KeyButton.Text = CurrentKey.Name
+						IsWaiting = false
+					elseif Mode == "Hold" then
+						if not IsHolding then
+							IsHolding = true
+							task.spawn(function()
+								if CallbackFunc then
+									CallbackFunc(true, CurrentKey)
+								end
+							end)
+						end
+					elseif Mode == "Once" then
+						IsWaiting = true
+						OnceState = true
+						task.spawn(function()
+							if CallbackFunc then
+								CallbackFunc(OnceState, CurrentKey)
+							end
+						end)
+						KeyButton.Text = CurrentKey.Name
+						IsWaiting = false
+					end
+				end
+			end)
+
+			UserInputService.InputEnded:Connect(function(Input, GameProcessed)
+				if not GameProcessed and Input.KeyCode == CurrentKey then
+					if Mode == "Hold" and IsHolding then
+						IsHolding = false
+						task.spawn(function()
+							if CallbackFunc then
+								CallbackFunc(false, CurrentKey)
+							end
+						end)
+					end
+				end
+			end)
+
+			return Container
+		end
+
+
 		function TabObject:AddColorPicker(Info)
-			local CurrentColor = Info.Default
+			local CurrentColor = Info.Default or Color3.fromRGB(255, 255, 255)
 			local H, S, V = Color3.toHSV(CurrentColor)
 			local Expanded = false
 			local OriginalColor = CurrentColor
@@ -1151,7 +1607,7 @@ function Library:Window(Config)
 
 			CreateInstance("UICorner", {
 				Parent = ColorDisplay, 
-				CornerRadius = UDim.new(0, 2)
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local PickerFrame = CreateInstance("Frame", {
@@ -1167,37 +1623,51 @@ function Library:Window(Config)
 				Size = UDim2.new(0, 100, 0, 100),
 				BackgroundColor3 = Color3.fromHSV(H, 1, 1),
 				BorderColor3 = Theme.Border,
-				ZIndex = 3
+				ZIndex = 3,
+				ClipsDescendants = true
 			})
 
 			CreateInstance("UICorner", {
-				Parent = SV, 
-				CornerRadius = UDim.new(0, 2)
+				Parent = SV,
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local Sat = CreateInstance("Frame", {
-				Parent = SV, 
-				Size = UDim2.new(1, 0, 1, 0), 
-				BackgroundColor3 = Color3.new(1, 1, 1)
+				Parent = SV,
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundColor3 = Color3.new(1, 1, 1),
+				BorderSizePixel = 0
+			})
+
+			CreateInstance("UICorner", {
+				Parent = Sat,
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local G1 = Instance.new("UIGradient", Sat)
 			G1.Transparency = NumberSequence.new{
-				NumberSequenceKeypoint.new(0, 0), 
+				NumberSequenceKeypoint.new(0, 0),
 				NumberSequenceKeypoint.new(1, 1)
 			}
 
 			local Val = CreateInstance("Frame", {
-				Parent = SV, 
-				Size = UDim2.new(1, 0, 1, 0), 
-				BackgroundColor3 = Color3.new(0, 0, 0)
+				Parent = SV,
+				Size = UDim2.new(1, 0, 1, 0),
+				BackgroundColor3 = Color3.new(0, 0, 0),
+				BorderSizePixel = 0
+			})
+
+			CreateInstance("UICorner", {
+				Parent = Val,
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local G2 = Instance.new("UIGradient", Val)
 			G2.Transparency = NumberSequence.new{
-				NumberSequenceKeypoint.new(0, 1), 
+				NumberSequenceKeypoint.new(0, 1),
 				NumberSequenceKeypoint.new(1, 0)
 			}
+
 			G2.Rotation = 90
 
 			local SVDot = CreateInstance("Frame", {
@@ -1210,7 +1680,7 @@ function Library:Window(Config)
 
 			CreateInstance("UICorner", {
 				Parent = SVDot, 
-				CornerRadius = UDim.new(0, 2)
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local Hue = CreateInstance("Frame", {
@@ -1220,10 +1690,10 @@ function Library:Window(Config)
 				BorderColor3 = Theme.Border,
 				ZIndex = 3
 			})
-
+			
 			CreateInstance("UICorner", {
 				Parent = Hue, 
-				CornerRadius = UDim.new(0, 2)
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local HueGradient = Instance.new("UIGradient", Hue)
@@ -1248,7 +1718,7 @@ function Library:Window(Config)
 
 			CreateInstance("UICorner", {
 				Parent = HueDot, 
-				CornerRadius = UDim.new(0, 100)
+				CornerRadius = UDim.new(0, 4)
 			})
 
 			local InfoBox = CreateInstance("TextLabel", {
@@ -1382,7 +1852,9 @@ function Library:Window(Config)
 
 			Header.MouseButton1Click:Connect(function()
 				Expanded = not Expanded
-				Container.Size = Expanded and UDim2.new(1, 0, 0, 170) or UDim2.new(1, 0, 0, 24)
+				TweenService:Create(Container, TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+					Size = Expanded and UDim2.new(1, 0, 0, 170) or UDim2.new(1, 0, 0, 24)
+				}):Play()
 				Container.ClipsDescendants = not Expanded
 				if not Expanded then
 					OriginalColor = CurrentColor
@@ -1393,170 +1865,7 @@ function Library:Window(Config)
 			Update()
 			return Container
 		end
-		
-		function TabObject:AddKeybind(Info)
-			local CurrentKey = Info.Default or Enum.KeyCode.E
-			local Mode = Info.Mode or "Toggle"
-			local IsWaiting = false
-			local IsListening = false
-			local ToggleState = false
-			local IsHolding = false
-			local CallbackFunc = Info.Callback
 
-			local Container = CreateInstance("Frame", {
-				Parent = Content,
-				BackgroundColor3 = Theme.ElementBg,
-				BorderSizePixel = 1,
-				BorderColor3 = Theme.Border,
-				Size = UDim2.new(1, 0, 0, 24)
-			})
-
-			CreateInstance("UICorner", {
-				Parent = Container, 
-				CornerRadius = UDim.new(0, 2)
-			})
-
-			local Label = CreateInstance("TextLabel", {
-				Parent = Container,
-				Text = Info.Title,
-				Font = Enum.Font.Code,
-				TextSize = 13,
-				TextColor3 = Theme.Text,
-				BackgroundTransparency = 1,
-				Position = UDim2.new(0, 8, 0, 0),
-				Size = UDim2.new(0.4, -8, 1, 0),
-				TextXAlignment = Enum.TextXAlignment.Left,
-				ZIndex = 2
-			})
-
-			local ModeButton = CreateInstance("TextButton", {
-				Parent = Container,
-				Text = Mode,
-				Font = Enum.Font.Code,
-				TextSize = 11,
-				TextColor3 = Theme.Text,
-				BackgroundColor3 = Theme.MainBg,
-				Position = UDim2.new(0.4, 18, 0, 3),
-				Size = UDim2.new(0.25, -4, 1, -6),
-				BorderSizePixel = 0,
-				ZIndex = 2
-			})
-
-			CreateInstance("UICorner", {
-				Parent = ModeButton, 
-				CornerRadius = UDim.new(0, 2)
-			})
-
-			local KeyButton = CreateInstance("TextButton", {
-				Parent = Container,
-				Text = CurrentKey.Name,
-				Font = Enum.Font.Code,
-				TextSize = 13,
-				TextColor3 = Theme.Text,
-				BackgroundColor3 = Theme.MainBg,
-				Position = UDim2.new(0.65, 20, 0, 3),
-				Size = UDim2.new(0.25, -4, 1, -6),
-				BorderSizePixel = 0,
-				ZIndex = 2
-			})
-
-			CreateInstance("UICorner", {
-				Parent = KeyButton, 
-				CornerRadius = UDim.new(0, 2)
-			})
-
-			ModeButton.MouseButton1Click:Connect(function()
-				if Mode == "Toggle" then
-					Mode = "Hold"
-				elseif Mode == "Hold" then
-					Mode = "Once"
-				else
-					Mode = "Toggle"
-				end
-				ModeButton.Text = Mode
-				ToggleState = false
-				IsHolding = false
-			end)
-
-			KeyButton.MouseButton1Click:Connect(function()
-				if not IsListening then
-					IsListening = true
-					KeyButton.Text = "..."
-					KeyButton.BackgroundColor3 = Library.CurrentTheme.MainBg
-				end
-			end)
-
-			KeyButton.MouseEnter:Connect(function()
-				if not IsListening then
-					KeyButton.BackgroundColor3 = Library.CurrentTheme.MainBg
-				end
-			end)
-
-			KeyButton.MouseLeave:Connect(function()
-				if not IsListening then
-					KeyButton.BackgroundColor3 = Library.CurrentTheme.MainBg
-				end
-			end)
-
-			UserInputService.InputBegan:Connect(function(Input, GameProcessed)
-				if IsListening then
-					if Input.UserInputType == Enum.UserInputType.Keyboard then
-						CurrentKey = Input.KeyCode
-						KeyButton.Text = CurrentKey.Name
-						KeyButton.BackgroundColor3 = Library.CurrentTheme.MainBg
-						IsListening = false
-					end
-				elseif not GameProcessed and Input.KeyCode == CurrentKey and not IsWaiting then
-					if Mode == "Toggle" then
-						ToggleState = not ToggleState
-						IsWaiting = true
-
-						task.spawn(function()
-							if CallbackFunc then
-								CallbackFunc(ToggleState)
-							end
-						end)
-						KeyButton.Text = CurrentKey.Name
-						IsWaiting = false
-					elseif Mode == "Hold" then
-						if not IsHolding then
-							IsHolding = true
-							task.spawn(function()
-								if CallbackFunc then
-									CallbackFunc(true)
-								end
-							end)
-						end
-					elseif Mode == "Once" then
-						IsWaiting = true
-						local OnceState = true
-						task.spawn(function()
-							if CallbackFunc then
-								CallbackFunc(OnceState)
-							end
-						end)
-						KeyButton.Text = CurrentKey.Name
-						IsWaiting = false
-					end
-				end
-			end)
-
-			UserInputService.InputEnded:Connect(function(Input, GameProcessed)
-				if not GameProcessed and Input.KeyCode == CurrentKey then
-					if Mode == "Hold" and IsHolding then
-						IsHolding = false
-						task.spawn(function()
-							if CallbackFunc then
-								CallbackFunc(false)
-							end
-						end)
-					end
-				end
-			end)
-
-			return Container
-		end
-		
 		TabButton.MouseButton1Click:Connect(function()
 			SwitchTab(TabObject)
 		end)
