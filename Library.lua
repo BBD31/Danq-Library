@@ -420,7 +420,7 @@ function Library:Window(Config)
 	local Dragging, DragStart, StartPos
 
 	TopBar.InputBegan:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Dragging = true
 			DragStart = Input.Position
 			StartPos = Main.Position
@@ -428,13 +428,13 @@ function Library:Window(Config)
 	end)
 
 	TopBar.InputEnded:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Dragging = false
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(Input)
-		if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement then
+		if Dragging and Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
 			local Delta = Input.Position - DragStart
 			Main.Position = UDim2.new(
 				StartPos.X.Scale, 
@@ -457,7 +457,7 @@ function Library:Window(Config)
 	})
 
 	ResizeDetector.InputBegan:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Resizing = true
 			ResizeStart = Input.Position
 			ResizeStartSize = Main.Size
@@ -465,13 +465,13 @@ function Library:Window(Config)
 	end)
 
 	ResizeDetector.InputEnded:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
 			Resizing = false
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(Input)
-		if Resizing and Input.UserInputType == Enum.UserInputType.MouseMovement then
+		if Resizing and Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
 			local Delta = Input.Position - ResizeStart
 			local NewWidth = math.max(250, ResizeStartSize.X.Offset + Delta.X)
 			local NewHeight = math.max(150, ResizeStartSize.Y.Offset + Delta.Y)
@@ -1882,3 +1882,4 @@ function Library:Window(Config)
 end
 
 return Library
+
