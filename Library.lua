@@ -457,7 +457,7 @@ function Library:Window(Config)
 	})
 
 	ResizeDetector.InputBegan:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Resizing = true
 			ResizeStart = Input.Position
 			ResizeStartSize = Main.Size
@@ -465,13 +465,13 @@ function Library:Window(Config)
 	end)
 
 	ResizeDetector.InputEnded:Connect(function(Input)
-		if Input.UserInputType == Enum.UserInputType.MouseButton1 or Input.UserInputType == Enum.UserInputType.Touch then
+		if Input.UserInputType == Enum.UserInputType.MouseButton1 then
 			Resizing = false
 		end
 	end)
 
 	UserInputService.InputChanged:Connect(function(Input)
-		if Resizing and Input.UserInputType == Enum.UserInputType.MouseMovement or Input.UserInputType == Enum.UserInputType.Touch then
+		if Resizing and Input.UserInputType == Enum.UserInputType.MouseMovement then
 			local Delta = Input.Position - ResizeStart
 			local NewWidth = math.max(250, ResizeStartSize.X.Offset + Delta.X)
 			local NewHeight = math.max(150, ResizeStartSize.Y.Offset + Delta.Y)
@@ -1882,4 +1882,5 @@ function Library:Window(Config)
 end
 
 return Library
+
 
